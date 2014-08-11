@@ -1,10 +1,12 @@
 import os
 import sys
 from docopt import docopt
+from textwrap import dedent
 import pickle
 
 db_filename = 'db.dat'
 db_version = '0.1.001'
+db = None
 
 def init():
   db = {'version': db_version,
@@ -20,7 +22,7 @@ def check(db):
 
 main_doc = """
 Usage:
-  money account new <name> [(<initial> <currency>)]
+  money account create <name> [(<initial> <currency>)]
   money account list
   money account info <name>
   money account delete <name>
@@ -35,14 +37,40 @@ class Account:
     self.currency = currency
 
   def __unicode__(self):
-    return 'Accout "%s" contains %d %s' %(self.name, self.current, self.currency)
+    return 'Account "%s" contains %d %s' %(self.name, self.current, self.currency)
 
   def __str__(self):
     return self.__unicode__()
 
-def main():
+  @staticmethod
+  def get_accounts():
+    global db
+    return db['accounts']
 
-  args = docopt(main_doc, help = True)
+  @staticmethod
+  def create(name, initial_amount, currency):
+    accounts = Account.get_accounts()
+    accounts[name] = Account(name, initial_amount, currency)
+    return accounts[name]
+
+  @staticmethod
+  def list(args):
+    accounts = Account.get_accounts()
+    for account_name in accounts:
+      print(account_name)
+
+  @staticmethod
+  def info(name):
+    accounts = Account.get_accounts()
+    if name not in accounts:
+      print('wrong name')
+      sys.exit(-1)
+    account = accounts[name]
+    print(account)
+
+
+def main():
+  args = docopt(main_doc, help = True, options_first = True)
   print(args)
 
   if os.path.exists(db_filename):
@@ -52,7 +80,14 @@ def main():
   else:
     db = init()
 
+  import pdb; pdb.set_trace()
+
   if args['account']:
+    command = 'create' if args['create'] else 'list' if args['list'] else 'info' if args['info'] else 'delete' if args['delete'] else 'unknown'
+    if hasattr(Account, command):
+      cmd = getattr(Account, command)
+      cmd(args)
+
     accounts = db['accounts']
     if args['new']:
       name = args['<name>']
